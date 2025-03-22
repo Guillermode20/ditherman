@@ -73,6 +73,21 @@
             opacity: 0.5;
             pointer-events: none;
         }
+        .reset-button {
+            padding: 4px 8px;
+            font-size: 12px;
+            margin-left: 8px;
+            width: auto;
+            background: #6c757d;
+        }
+        .control-row {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        .control-main {
+            flex-grow: 1;
+        }
     </style>
 </head>
 <body>
@@ -90,6 +105,80 @@
                 <option value="floyd-steinberg">Floyd-Steinberg Dithering</option>
                 <option value="ordered">Ordered Dithering</option>
             </select>
+
+            <button id="resetAll" style="background: #dc3545;">Reset All Controls</button>
+
+            <div class="control-row">
+                <div class="control-main">
+                    <label for="threshold">Threshold (0-255):</label>
+                    <input type="range" id="threshold" min="0" max="255" value="128" style="width: 100%;">
+                    <span id="thresholdValue">128</span>
+                </div>
+                <button class="reset-button" onclick="resetControl('threshold', 128, true)">Reset</button>
+            </div>
+
+            <div class="control-row">
+                <div class="control-main">
+                    <label for="scale">Error Scale (0-2):</label>
+                    <input type="range" id="scale" min="0" max="2" value="1" step="0.1" style="width: 100%;">
+                    <span id="scaleValue">1.0</span>
+                </div>
+                <button class="reset-button" onclick="resetControl('scale', 1, true, 1)">Reset</button>
+            </div>
+
+            <div class="control-row">
+                <div class="control-main">
+                    <label for="ditherScale">Dither Scale (1-8):</label>
+                    <input type="range" id="ditherScale" min="1" max="8" value="1" step="1" style="width: 100%;">
+                    <span id="ditherScaleValue">1</span>
+                </div>
+                <button class="reset-button" onclick="resetControl('ditherScale', 1)">Reset</button>
+            </div>
+
+            <div class="control-row">
+                <div class="control-main">
+                    <label for="contrast">Contrast (-100 to 100):</label>
+                    <input type="range" id="contrast" min="-100" max="100" value="0" step="1" style="width: 100%;">
+                    <span id="contrastValue">0</span>
+                </div>
+                <button class="reset-button" onclick="resetControl('contrast', 0)">Reset</button>
+            </div>
+
+            <div class="control-row">
+                <div class="control-main">
+                    <label for="midtones">Midtones (-100 to 100):</label>
+                    <input type="range" id="midtones" min="-100" max="100" value="0" step="1" style="width: 100%;">
+                    <span id="midtonesValue">0</span>
+                </div>
+                <button class="reset-button" onclick="resetControl('midtones', 0)">Reset</button>
+            </div>
+
+            <div class="control-row">
+                <div class="control-main">
+                    <label for="highlights">Highlights (-100 to 100):</label>
+                    <input type="range" id="highlights" min="-100" max="100" value="0" step="1" style="width: 100%;">
+                    <span id="highlightsValue">0</span>
+                </div>
+                <button class="reset-button" onclick="resetControl('highlights', 0)">Reset</button>
+            </div>
+
+            <div class="control-row">
+                <div class="control-main">
+                    <label for="luminanceThreshold">Luminance Threshold (0-255):</label>
+                    <input type="range" id="luminanceThreshold" min="0" max="255" value="128" step="1" style="width: 100%;">
+                    <span id="luminanceThresholdValue">128</span>
+                </div>
+                <button class="reset-button" onclick="resetControl('luminanceThreshold', 128)">Reset</button>
+            </div>
+
+            <div class="control-row">
+                <div class="control-main">
+                    <label for="blur">Blur (0-10):</label>
+                    <input type="range" id="blur" min="0" max="10" value="0" step="0.1" style="width: 100%;">
+                    <span id="blurValue">0</span>
+                </div>
+                <button class="reset-button" onclick="resetControl('blur', 0, true, 1)">Reset</button>
+            </div>
         </div>
         
         <div class="preview">
@@ -101,7 +190,23 @@
     <script>
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
-        const algorithmSelect = document.getElementById('algorithm');
+            const algorithmSelect = document.getElementById('algorithm');
+            const thresholdInput = document.getElementById('threshold');
+            const thresholdValue = document.getElementById('thresholdValue');
+            const scaleInput = document.getElementById('scale');
+            const scaleValue = document.getElementById('scaleValue');
+            const ditherScaleInput = document.getElementById('ditherScale');
+            const ditherScaleValue = document.getElementById('ditherScaleValue');
+            const contrastInput = document.getElementById('contrast');
+            const contrastValue = document.getElementById('contrastValue');
+            const midtonesInput = document.getElementById('midtones');
+            const midtonesValue = document.getElementById('midtonesValue');
+            const highlightsInput = document.getElementById('highlights');
+            const highlightsValue = document.getElementById('highlightsValue');
+            const luminanceThresholdInput = document.getElementById('luminanceThreshold');
+            const luminanceThresholdValue = document.getElementById('luminanceThresholdValue');
+            const blurInput = document.getElementById('blur');
+            const blurValue = document.getElementById('blurValue');
         const preview = document.getElementById('preview');
         let currentFile = null;
 
@@ -130,12 +235,46 @@
             handleFile(e.target.files[0]);
         });
 
-        // Handle algorithm change
-        algorithmSelect.addEventListener('change', () => {
+        // Handle parameter changes
+        algorithmSelect.addEventListener('change', updateImage);
+        thresholdInput.addEventListener('input', (e) => {
+            thresholdValue.textContent = e.target.value;
+            updateImage();
+        });
+        scaleInput.addEventListener('input', (e) => {
+            scaleValue.textContent = parseFloat(e.target.value).toFixed(1);
+            updateImage();
+        });
+        ditherScaleInput.addEventListener('input', (e) => {
+            ditherScaleValue.textContent = e.target.value;
+            updateImage();
+        });
+        contrastInput.addEventListener('input', (e) => {
+            contrastValue.textContent = e.target.value;
+            updateImage();
+        });
+        midtonesInput.addEventListener('input', (e) => {
+            midtonesValue.textContent = e.target.value;
+            updateImage();
+        });
+        highlightsInput.addEventListener('input', (e) => {
+            highlightsValue.textContent = e.target.value;
+            updateImage();
+        });
+        luminanceThresholdInput.addEventListener('input', (e) => {
+            luminanceThresholdValue.textContent = e.target.value;
+            updateImage();
+        });
+        blurInput.addEventListener('input', (e) => {
+            blurValue.textContent = parseFloat(e.target.value).toFixed(1);
+            updateImage();
+        });
+
+        function updateImage() {
             if (currentFile) {
                 processImage(currentFile);
             }
-        });
+        }
 
         function handleFile(file) {
             if (!file || !file.type.startsWith('image/')) {
@@ -151,6 +290,14 @@
             const formData = new FormData();
             formData.append('image', file);
             formData.append('algorithm', algorithmSelect.value);
+            formData.append('threshold', thresholdInput.value);
+            formData.append('scale', scaleInput.value);
+            formData.append('ditherScale', ditherScaleInput.value);
+            formData.append('contrast', contrastInput.value);
+            formData.append('midtones', midtonesInput.value);
+            formData.append('highlights', highlightsInput.value);
+            formData.append('luminanceThreshold', luminanceThresholdInput.value);
+            formData.append('blur', blurInput.value);
 
             // Show loading state
             preview.classList.add('loading');
@@ -179,6 +326,49 @@
         // Remove loading state when image loads
         preview.addEventListener('load', () => {
             preview.classList.remove('loading');
+        });
+
+        // Reset individual control
+        function resetControl(id, defaultValue, isFloat = false, decimals = 0) {
+            const input = document.getElementById(id);
+            const valueDisplay = document.getElementById(id + 'Value');
+            input.value = defaultValue;
+            valueDisplay.textContent = isFloat ? defaultValue.toFixed(decimals) : defaultValue;
+            updateImage();
+        }
+
+        // Reset all controls
+        document.getElementById('resetAll').addEventListener('click', () => {
+            // Reset algorithm
+            algorithmSelect.value = 'floyd-steinberg';
+            
+            // Reset all sliders to their default values
+            thresholdInput.value = '128';
+            thresholdValue.textContent = '128';
+            
+            scaleInput.value = '1';
+            scaleValue.textContent = '1.0';
+            
+            ditherScaleInput.value = '1';
+            ditherScaleValue.textContent = '1';
+            
+            contrastInput.value = '0';
+            contrastValue.textContent = '0';
+            
+            midtonesInput.value = '0';
+            midtonesValue.textContent = '0';
+            
+            highlightsInput.value = '0';
+            highlightsValue.textContent = '0';
+            
+            luminanceThresholdInput.value = '128';
+            luminanceThresholdValue.textContent = '128';
+            
+            blurInput.value = '0';
+            blurValue.textContent = '0';
+            
+            // Update the image with reset values
+            updateImage();
         });
     </script>
 </body>
