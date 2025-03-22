@@ -1,0 +1,38 @@
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Dependency directories (remove if vendoring is done manually)
+vendor/
+
+# Go workspace cache
+/go.work.sum
+/go.work
+
+# Go modules
+go.mod
+go.sum
+
+# IDE
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# Temporary files
+*~
+# OS generated files
+.DS_Store
+
+# Coverage files
+*.out
+*.cov
+
+# Env files
+.env
