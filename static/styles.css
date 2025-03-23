@@ -1,16 +1,17 @@
 :root {
     --slider-track-height: 6px;
     --slider-thumb-size: 16px;
-    --dot-scale: 1; /* Default dot scale */
+    --dot-scale: 1;
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
     margin: 0;
     padding: 0;
-    background: #f0f0f0;
+    background: #1a1a1a;
     height: 100vh;
     overflow: hidden;
+    color: #e0e0e0;
 }
 
 .container {
@@ -20,9 +21,9 @@ body {
 
 .sidebar {
     width: 300px;
-    background: #fff;
+    background: #262626;
     padding: 20px;
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.3);
     overflow-y: auto;
 }
 
@@ -44,8 +45,8 @@ body {
 .tooltip .tooltiptext {
     visibility: hidden;
     width: 200px;
-    background-color: #333;
-    color: white;
+    background-color: #1a1a1a;
+    color: #e0e0e0;
     text-align: center;
     border-radius: 6px;
     padding: 8px;
@@ -66,17 +67,17 @@ body {
 
 /* Control group styles */
 .control-group {
-    background: white;
+    background: #333333;
     border-radius: 8px;
     padding: 15px;
     margin-bottom: 15px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .control-group h3 {
     margin-top: 0;
     margin-bottom: 15px;
-    color: #333;
+    color: #e0e0e0;
     font-size: 16px;
     font-weight: 600;
 }
@@ -94,6 +95,7 @@ input[type="range"]::-webkit-slider-runnable-track {
     width: 100%;
     height: var(--slider-track-height);
     border-radius: 3px;
+    background: #fff;
 }
 
 input[type="range"]::-webkit-slider-thumb {
@@ -101,7 +103,7 @@ input[type="range"]::-webkit-slider-thumb {
     height: var(--slider-thumb-size);
     width: var(--slider-thumb-size);
     border-radius: 50%;
-    background: #0066cc;
+    background: #0088ff;
     cursor: pointer;
     margin-top: -5px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
@@ -109,26 +111,26 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
-    background: #0052a3;
+    background: #0066cc;
 }
 
 /* Slider background gradients */
 #threshold::-webkit-slider-runnable-track,
 #luminanceThreshold::-webkit-slider-runnable-track {
-    background: linear-gradient(to right, black, white);
+    background: linear-gradient(to right, #1a1a1a, #e0e0e0);
 }
 
 #contrast::-webkit-slider-runnable-track {
-    background: linear-gradient(to right, #666, #999 50%, #fff);
+    background: linear-gradient(to right, #333, #666 50%, #e0e0e0);
 }
 
 #midtones::-webkit-slider-runnable-track,
 #highlights::-webkit-slider-runnable-track {
-    background: linear-gradient(to right, #333, #999, #fff);
+    background: linear-gradient(to right, #1a1a1a, #666, #e0e0e0);
 }
 
 #blur::-webkit-slider-runnable-track {
-    background: linear-gradient(to right, #fff, rgba(255, 255, 255, 0.5));
+    background: linear-gradient(to right, #333, rgba(51, 51, 51, 0.5));
 }
 
 select,
@@ -137,9 +139,12 @@ input[type="number"] {
     width: 100%;
     padding: 10px;
     margin: 10px 0;
-    border: 1px solid #ddd;
+    border: 1px solid #444;
     border-radius: 4px;
     font-size: 14px;
+    background: #1a1a1a;
+    color: #e0e0e0;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
 }
 
 input[type="number"] {
@@ -150,11 +155,11 @@ input[type="number"] {
 
 .control-row label {
     font-size: 14px;
-    color: #444;
+    color: #e0e0e0;
 }
 
 button {
-    background: #0066cc;
+    background: #0088ff;
     color: white;
     border: none;
     cursor: pointer;
@@ -162,21 +167,23 @@ button {
 }
 
 button:hover {
-    background: #0052a3;
+    background: #0066cc;
 }
 
 #dropZone {
-    border: 2px dashed #ccc;
+    border: 2px dashed #444;
     border-radius: 4px;
     padding: 20px;
     text-align: center;
     margin: 10px 0;
     cursor: pointer;
+    background: #1a1a1a;
+    color: #e0e0e0;
 }
 
 #dropZone.dragover {
-    background: #e1f5fe;
-    border-color: #0066cc;
+    background: #2a2a2a;
+    border-color: #0088ff;
 }
 
 img {
@@ -195,7 +202,11 @@ img {
     font-size: 12px;
     margin-left: 8px;
     width: auto;
-    background: #6c757d;
+    background: #444;
+}
+
+.reset-button:hover {
+    background: #555;
 }
 
 .control-row {

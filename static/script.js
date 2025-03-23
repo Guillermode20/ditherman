@@ -121,9 +121,32 @@ function updateImage() {
     }
 }
 
-function handleFile(file) {
+function validateImageFile(file) {
+    // Check if the file is an image
     if (!file || !file.type.startsWith('image/')) {
-        alert('Please upload an image file');
+        return { valid: false, message: 'Please upload an image file.' };
+    }
+    
+    // Check if the image is a supported format (JPEG or PNG)
+    const supportedTypes = ['image/jpeg', 'image/png'];
+    if (!supportedTypes.includes(file.type)) {
+        return { 
+            valid: false, 
+            message: `Unsupported image format: ${file.type}. Please upload a JPEG or PNG file.`
+        };
+    }
+    
+    return { valid: true };
+}
+
+function handleFile(file) {
+    // Update the UI to show the original filename
+    dropZone.textContent = file ? `File: ${file.name}` : 'Drop image here or click to upload';
+    
+    // Validate the file
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+        alert(validation.message);
         return;
     }
 
@@ -145,6 +168,12 @@ async function processImage(file) {
 
     // Show loading state
     preview.classList.add('loading');
+    
+    // Show file type in UI for debugging
+    const fileInfo = document.createElement('div');
+    fileInfo.className = 'file-info';
+    fileInfo.textContent = `Processing ${file.name} (${file.type})`;
+    document.querySelector('.main-content h3').textContent = 'Preview - Processing...';
 
     try {
         const response = await fetch('http://localhost:3000/dither', {
@@ -153,15 +182,23 @@ async function processImage(file) {
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Error processing image');
+            let errorMessage = 'Error processing image';
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.error || errorMessage;
+            } catch (e) {
+                // If the response is not valid JSON, use default error message
+            }
+            throw new Error(errorMessage);
         }
 
         const blob = await response.blob();
         preview.src = URL.createObjectURL(blob);
+        document.querySelector('.main-content h3').textContent = 'Preview';
     } catch (error) {
         console.error('Error:', error);
         alert(error.message);
+        document.querySelector('.main-content h3').textContent = 'Preview - Error';
     } finally {
         preview.classList.remove('loading');
     }
@@ -173,16 +210,26 @@ preview.addEventListener('load', () => {
 });
 
 // Reset individual control
-function resetControl(id, isFloat = false) {
+function resetControl(id, isFloat = false, defaultValue = null) {
     const input = document.getElementById(id);
     const valueDisplay = document.getElementById(id + 'Value');
-    const sliderInput = sliderInputs.find(item => item.input.id === id);
-    const defaultValue = sliderInput.defaultValue;
+    let value = defaultValue;
+    
+    if (value === null) {
+        const sliderInput = sliderInputs.find(item => item.input.id === id);
+        if (sliderInput) {
+            value = sliderInput.defaultValue;
+        } else {
+            // Fallback default values if not in the list
+            value = isFloat ? 0.0 : 0;
+        }
+    }
+    
     const numInput = input.parentElement.querySelector('input[type="number"]');
-    input.value = defaultValue;
-    valueDisplay.textContent = isFloat ? parseFloat(defaultValue).toFixed(1) : defaultValue;
+    input.value = value;
+    valueDisplay.textContent = isFloat ? parseFloat(value).toFixed(1) : value;
     if (numInput) {
-        numInput.value = defaultValue;
+        numInput.value = value;
     }
     updateImage();
 }
@@ -195,14 +242,17 @@ function applyDefaultSettings() {
     // Reset invert
     invertInput.checked = false;
 
-    resetControl('scale', true);
-    resetControl('contrast');
-    resetControl('midtones');
-    resetControl('highlights');
-    resetControl('luminanceThreshold');
-    resetControl('blur', true);
+    resetControl('scale', true, 1);
+    resetControl('contrast', false, 50);
+    resetControl('midtones', false, 50);
+    resetControl('highlights', false, 50);
+    resetControl('luminanceThreshold', false, 0);
+    resetControl('blur', true, 0);
 
-    // Update the image with reset values
+    // Reset drop zone text
+    dropZone.textContent = 'Drop image here or click to upload';
+    
+    // Update the image with reset values if a file is already loaded
     updateImage();
 }
 

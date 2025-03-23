@@ -2,12 +2,14 @@ package handlers
 
 import (
 	"bytes"
+	"fmt"
 	"image/png"
 	"math"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
-
 	"github.com/willhick/ditherman/server/dither"
 	"github.com/willhick/ditherman/server/image"
 )
@@ -18,6 +20,22 @@ func HandleDither(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"error": "No image provided",
+		})
+	}
+
+	// Validate file type
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	contentType := file.Header.Get("Content-Type")
+
+	// Check if both extension and content type are valid
+	if !isValidImageExt(ext) {
+		return c.Status(400).JSON(fiber.Map{
+			"error": fmt.Sprintf("Unsupported file extension. Only .jpg, .jpeg, and .png are supported. Got: %s", ext),
+		})
+	}
+	if !isValidContentType(contentType) {
+		return c.Status(400).JSON(fiber.Map{
+			"error": fmt.Sprintf("Unsupported content type. Only image/jpeg and image/png are supported. Got: %s", contentType),
 		})
 	}
 
@@ -99,7 +117,7 @@ func HandleDither(c *fiber.Ctx) error {
 	// Apply dithering
 	var dithered = dither.Apply(img, algorithm, scale, invert)
 
-	// Encode the result
+	// Encode the result as PNG
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, dithered); err != nil {
 		return c.Status(500).JSON(fiber.Map{
@@ -107,6 +125,27 @@ func HandleDither(c *fiber.Ctx) error {
 		})
 	}
 
+	// Set appropriate headers and send response
 	c.Set("Content-Type", "image/png")
+	c.Set("Content-Disposition", fmt.Sprintf("attachment; filename=dithered%s.png", ext))
 	return c.Send(buf.Bytes())
+}
+
+// isValidImageExt checks if the file has a valid image extension
+func isValidImageExt(ext string) bool {
+	validExts := map[string]bool{
+		".jpg":  true,
+		".jpeg": true,
+		".png":  true,
+	}
+	return validExts[ext]
+}
+
+// isValidContentType checks if the file has a valid content type
+func isValidContentType(contentType string) bool {
+	validTypes := map[string]bool{
+		"image/jpeg": true,
+		"image/png":  true,
+	}
+	return validTypes[contentType]
 }
