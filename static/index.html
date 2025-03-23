@@ -61,7 +61,7 @@
                             <label for="contrast">Contrast (0-100):</label>
                             <input type="range" id="contrast" min="0" max="100" value="0" step="1" style="width: 100%;">
                             <span id="contrastValue">0</span>
-                            <input type="number" min="-100" max="100" value="0" step="1" onchange="updateSlider('contrast', this.value)">
+                            <input type="number" min="0" max="100" value="0" step="1" onchange="updateSlider('contrast', this.value)">
                         </div>
                         <button class="reset-button" onclick="resetControl('contrast', 0)">Reset</button>
                     </div>
@@ -69,10 +69,10 @@
                     <div class="control-row tooltip">
                         <span class="tooltiptext">Fine-tune the middle gray tones</span>
                         <div class="control-main">
-                            <label for="midtones">Midtones (-100 to 100):</label>
-                            <input type="range" id="midtones" min="-100" max="100" value="0" step="1" style="width: 100%;">
+                            <label for="midtones">Midtones (0 to 100):</label>
+                            <input type="range" id="midtones" min="0" max="100" value="0" step="1" style="width: 100%;">
                             <span id="midtonesValue">0</span>
-                            <input type="number" min="-100" max="100" value="0" step="1" onchange="updateSlider('midtones', this.value)">
+                            <input type="number" min="0" max="100" value="0" step="1" onchange="updateSlider('midtones', this.value)">
                         </div>
                         <button class="reset-button" onclick="resetControl('midtones', 0)">Reset</button>
                     </div>
@@ -80,10 +80,10 @@
                     <div class="control-row tooltip">
                         <span class="tooltiptext">Adjust the bright areas of the image</span>
                         <div class="control-main">
-                            <label for="highlights">Highlights (-100 to 100):</label>
-                            <input type="range" id="highlights" min="-100" max="100" value="0" step="1" style="width: 100%;">
+                            <label for="highlights">Highlights (0 to 100):</label>
+                            <input type="range" id="highlights" min="0" max="100" value="0" step="1" style="width: 100%;">
                             <span id="highlightsValue">0</span>
-                            <input type="number" min="-100" max="100" value="0" step="1" onchange="updateSlider('highlights', this.value)">
+                            <input type="number" min="0" max="100" value="0" step="1" onchange="updateSlider('highlights', this.value)">
                         </div>
                         <button class="reset-button" onclick="resetControl('highlights', 0)">Reset</button>
                     </div>

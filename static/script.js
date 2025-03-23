@@ -84,26 +84,25 @@ const debouncedUpdateImage = debounce(() => {
 algorithmSelect.addEventListener('change', () => updateImage());
 
 const sliderInputs = [
-    { input: scaleInput, isFloat: true },
-    { input: contrastInput, isFloat: false },
-    { input: midtonesInput, isFloat: false },
-    { input: highlightsInput, isFloat: false },
-    { input: luminanceThresholdInput, isFloat: false },
-    { input: blurInput, isFloat: true }
+    { input: scaleInput, isFloat: true, defaultValue: 1 },
+    { input: contrastInput, isFloat: false, defaultValue: 50 },
+    { input: midtonesInput, isFloat: false, defaultValue: 50 },
+    { input: highlightsInput, isFloat: false, defaultValue: 50 },
+    { input: luminanceThresholdInput, isFloat: false, defaultValue: 50 },
+    { input: blurInput, isFloat: true, defaultValue: 0 }
 ];
 
 sliderInputs.forEach(({ input, isFloat }) => {
     // Add double-click to reset
     input.addEventListener('dblclick', () => {
-        const defaultValue = input.id === 'threshold' || input.id === 'luminanceThreshold' ? 128 :
-            input.id === 'scale' ? 1 :
-                input.id === 'ditherScale' ? 1 : 0;
-        updateSlider(input.id, defaultValue);
+        resetControl(input.id, isFloat);
     });
 
     // Handle input events
     input.addEventListener('input', (e) => {
-        const value = e.target.value;
+        let value = e.target.value;
+        if (value < 0) value = 0;
+        if (value > 100) value = 100;
         const display = document.getElementById(input.id + 'Value');
         const numInput = input.parentElement.querySelector('input[type="number"]');
 
@@ -174,41 +173,39 @@ preview.addEventListener('load', () => {
 });
 
 // Reset individual control
-function resetControl(id, defaultValue, isFloat = false, decimals = 0) {
+function resetControl(id, isFloat = false) {
     const input = document.getElementById(id);
     const valueDisplay = document.getElementById(id + 'Value');
+    const sliderInput = sliderInputs.find(item => item.input.id === id);
+    const defaultValue = sliderInput.defaultValue;
+    const numInput = input.parentElement.querySelector('input[type="number"]');
     input.value = defaultValue;
-    valueDisplay.textContent = isFloat ? defaultValue.toFixed(decimals) : defaultValue;
+    valueDisplay.textContent = isFloat ? parseFloat(defaultValue).toFixed(1) : defaultValue;
+    if (numInput) {
+        numInput.value = defaultValue;
+    }
     updateImage();
 }
 
 // Reset all controls
-document.getElementById('resetAll').addEventListener('click', () => {
+function applyDefaultSettings() {
     // Reset algorithm
     algorithmSelect.value = 'floyd-steinberg';
 
     // Reset invert
     invertInput.checked = false;
 
-    // Reset all sliders to their default values
-    scaleInput.value = '1';
-    scaleValue.textContent = '1.0';
-
-    contrastInput.value = '0';
-    contrastValue.textContent = '0';
-
-    midtonesInput.value = '0';
-    midtonesValue.textContent = '0';
-
-    highlightsInput.value = '0';
-    highlightsValue.textContent = '0';
-
-    luminanceThresholdInput.value = '0';
-    luminanceThresholdValue.textContent = '0';
-
-    blurInput.value = '0';
-    blurValue.textContent = '0';
+    resetControl('scale', true);
+    resetControl('contrast');
+    resetControl('midtones');
+    resetControl('highlights');
+    resetControl('luminanceThreshold');
+    resetControl('blur', true);
 
     // Update the image with reset values
     updateImage();
-});
+}
+
+document.getElementById('resetAll').addEventListener('click', applyDefaultSettings);
+
+window.addEventListener('load', applyDefaultSettings);
