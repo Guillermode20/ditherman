@@ -7,117 +7,119 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>Ditherman</h1>
-    <p>Upload an image and see it dithered in real-time with different algorithms.</p>
-    
     <div class="container">
-        <div class="controls">
-            <div class="control-group">
-                <div id="dropZone">
-                    Drop image here or click to upload
-                    <input type="file" id="fileInput" accept="image/*" style="display: none;">
-                </div>
-                
-                <select id="algorithm" class="tooltip">
-                    <span class="tooltiptext">Choose between different dithering algorithms</span>
-                    <option value="floyd-steinberg">Floyd-Steinberg Dithering</option>
-                    <option value="ordered">Ordered Dithering</option>
-                </select>
+        <aside class="sidebar">
+            <h1>Ditherman</h1>
+            <p>Upload an image and see it dithered in real-time with different algorithms.</p>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <div id="dropZone">
+                        Drop image here or click to upload
+                        <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                    </div>
+                    
+                    <select id="algorithm" class="tooltip">
+                        <span class="tooltiptext">Choose between different dithering algorithms</span>
+                        <option value="floyd-steinberg">Floyd-Steinberg Dithering</option>
+                        <option value="ordered">Ordered Dithering</option>
+                    </select>
 
-                <button id="resetAll" style="background: #dc3545;">Reset All Controls</button>
+                    <button id="resetAll" style="background: #dc3545;">Reset All Controls</button>
+                </div>
+
+                <div class="control-group">
+                    <h3>Dithering Controls</h3>
+
+                    <div class="control-row tooltip">
+                        <span class="tooltiptext">Adjust the size of dither dots (higher values reduce resolution)</span>
+                        <div class="control-main">
+                            <label for="scale">Scale (0-20):</label>
+                            <input type="range" id="scale" min="0" max="20" value="1" step="0.1" style="width: 100%;">
+                            <span id="scaleValue">1.0</span>
+                            <input type="number" min="0" max="20" value="1" step="0.1" onchange="updateSlider('scale', this.value)">
+                        </div>
+                        <button class="reset-button" onclick="resetControl('scale', 1, true, 1)">Reset</button>
+                    </div>
+
+                    <div class="control-row">
+                        <div class="control-main">
+                            <label for="invert">
+                                <input type="checkbox" id="invert" onchange="updateImage()">
+                                Invert Colors
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Image Adjustments</h3>
+
+                    <div class="control-row tooltip">
+                        <span class="tooltiptext">Adjust image contrast before dithering</span>
+                        <div class="control-main">
+                            <label for="contrast">Contrast (0-100):</label>
+                            <input type="range" id="contrast" min="0" max="100" value="0" step="1" style="width: 100%;">
+                            <span id="contrastValue">0</span>
+                            <input type="number" min="-100" max="100" value="0" step="1" onchange="updateSlider('contrast', this.value)">
+                        </div>
+                        <button class="reset-button" onclick="resetControl('contrast', 0)">Reset</button>
+                    </div>
+
+                    <div class="control-row tooltip">
+                        <span class="tooltiptext">Fine-tune the middle gray tones</span>
+                        <div class="control-main">
+                            <label for="midtones">Midtones (-100 to 100):</label>
+                            <input type="range" id="midtones" min="-100" max="100" value="0" step="1" style="width: 100%;">
+                            <span id="midtonesValue">0</span>
+                            <input type="number" min="-100" max="100" value="0" step="1" onchange="updateSlider('midtones', this.value)">
+                        </div>
+                        <button class="reset-button" onclick="resetControl('midtones', 0)">Reset</button>
+                    </div>
+
+                    <div class="control-row tooltip">
+                        <span class="tooltiptext">Adjust the bright areas of the image</span>
+                        <div class="control-main">
+                            <label for="highlights">Highlights (-100 to 100):</label>
+                            <input type="range" id="highlights" min="-100" max="100" value="0" step="1" style="width: 100%;">
+                            <span id="highlightsValue">0</span>
+                            <input type="number" min="-100" max="100" value="0" step="1" onchange="updateSlider('highlights', this.value)">
+                        </div>
+                        <button class="reset-button" onclick="resetControl('highlights', 0)">Reset</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Advanced Controls</h3>
+
+                    <div class="control-row tooltip">
+                        <span class="tooltiptext">Set the brightness level that determines black/white conversion</span>
+                        <div class="control-main">
+                            <label for="luminanceThreshold">Luminance (0-100):</label>
+                            <input type="range" id="luminanceThreshold" min="0" max="100" value="0" step="1" style="width: 100%;">
+                            <span id="luminanceThresholdValue">0</span>
+                            <input type="number" min="0" max="100" value="0" step="1" onchange="updateSlider('luminanceThreshold', this.value)">
+                        </div>
+                        <button class="reset-button" onclick="resetControl('luminanceThreshold', 128)">Reset</button>
+                    </div>
+
+                    <div class="control-row tooltip">
+                        <span class="tooltiptext">Apply Gaussian blur before dithering</span>
+                        <div class="control-main">
+                            <label for="blur">Blur (0-10):</label>
+                            <input type="range" id="blur" min="0" max="10" value="0" step="0.1" style="width: 100%;">
+                            <span id="blurValue">0</span>
+                            <input type="number" min="0" max="10" value="0" step="0.1" onchange="updateSlider('blur', this.value)">
+                        </div>
+                        <button class="reset-button" onclick="resetControl('blur', 0, true, 1)">Reset</button>
+                    </div>
+                </div>
             </div>
-
-            <div class="control-group">
-                <h3>Dithering Controls</h3>
-
-                <div class="control-row tooltip">
-                    <span class="tooltiptext">Adjust the strength of error diffusion</span>
-                    <div class="control-main">
-                        <label for="scale">Scale (0-20):</label>
-                        <input type="range" id="scale" min="0" max="20" value="1" step="0.1" style="width: 100%;">
-                        <span id="scaleValue">1.0</span>
-                        <input type="number" min="0" max="20" value="1" step="0.1" onchange="updateSlider('scale', this.value)">
-                    </div>
-                    <button class="reset-button" onclick="resetControl('scale', 1, true, 1)">Reset</button>
-                </div>
-
-                <div class="control-row">
-                    <div class="control-main">
-                        <label for="invert">
-                            <input type="checkbox" id="invert" onchange="updateImage()">
-                            Invert Colors
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <div class="control-group">
-                <h3>Image Adjustments</h3>
-
-                <div class="control-row tooltip">
-                    <span class="tooltiptext">Adjust image contrast before dithering</span>
-                    <div class="control-main">
-                        <label for="contrast">Contrast (0-100):</label>
-                        <input type="range" id="contrast" min="0" max="100" value="0" step="1" style="width: 100%;">
-                        <span id="contrastValue">0</span>
-                        <input type="number" min="-100" max="100" value="0" step="1" onchange="updateSlider('contrast', this.value)">
-                    </div>
-                    <button class="reset-button" onclick="resetControl('contrast', 0)">Reset</button>
-                </div>
-
-                <div class="control-row tooltip">
-                    <span class="tooltiptext">Fine-tune the middle gray tones</span>
-                    <div class="control-main">
-                        <label for="midtones">Midtones (-100 to 100):</label>
-                        <input type="range" id="midtones" min="-100" max="100" value="0" step="1" style="width: 100%;">
-                        <span id="midtonesValue">0</span>
-                        <input type="number" min="-100" max="100" value="0" step="1" onchange="updateSlider('midtones', this.value)">
-                    </div>
-                    <button class="reset-button" onclick="resetControl('midtones', 0)">Reset</button>
-                </div>
-
-                <div class="control-row tooltip">
-                    <span class="tooltiptext">Adjust the bright areas of the image</span>
-                    <div class="control-main">
-                        <label for="highlights">Highlights (-100 to 100):</label>
-                        <input type="range" id="highlights" min="-100" max="100" value="0" step="1" style="width: 100%;">
-                        <span id="highlightsValue">0</span>
-                        <input type="number" min="-100" max="100" value="0" step="1" onchange="updateSlider('highlights', this.value)">
-                    </div>
-                    <button class="reset-button" onclick="resetControl('highlights', 0)">Reset</button>
-                </div>
-            </div>
-
-            <div class="control-group">
-                <h3>Advanced Controls</h3>
-
-                <div class="control-row tooltip">
-                    <span class="tooltiptext">Set the brightness level that determines black/white conversion</span>
-                    <div class="control-main">
-                        <label for="luminanceThreshold">Luminance (0-100):</label>
-                        <input type="range" id="luminanceThreshold" min="0" max="100" value="0" step="1" style="width: 100%;">
-                        <span id="luminanceThresholdValue">0</span>
-                        <input type="number" min="0" max="100" value="0" step="1" onchange="updateSlider('luminanceThreshold', this.value)">
-                    </div>
-                    <button class="reset-button" onclick="resetControl('luminanceThreshold', 128)">Reset</button>
-                </div>
-
-                <div class="control-row tooltip">
-                    <span class="tooltiptext">Apply Gaussian blur before dithering</span>
-                    <div class="control-main">
-                        <label for="blur">Blur (0-10):</label>
-                        <input type="range" id="blur" min="0" max="10" value="0" step="0.1" style="width: 100%;">
-                        <span id="blurValue">0</span>
-                        <input type="number" min="0" max="10" value="0" step="0.1" onchange="updateSlider('blur', this.value)">
-                    </div>
-                    <button class="reset-button" onclick="resetControl('blur', 0, true, 1)">Reset</button>
-                </div>
-            </div>
-        </div>
+        </aside>
         
-        <div class="preview">
+        <main class="main-content">
             <h3>Preview</h3>
             <img id="preview" alt="Dithered preview">
-        </div>
+        </main>
     </div>
     <script src="script.js"></script>

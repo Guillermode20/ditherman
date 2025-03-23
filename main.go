@@ -68,7 +68,7 @@ func handleDither(c *fiber.Ctx) error {
     // Scale to 0-20 range
     scale = math.Min(math.Max(scale, 0), 20)
 
-    contrast, err := strconv.ParseFloat(c.FormValue("contrast", "0"), 64)
+    contrast, err := strconv.ParseFloat(c.FormValue("contrast", "50"), 64)
     if err != nil {
         return c.Status(400).JSON(fiber.Map{
             "error": "Invalid contrast value",
@@ -77,7 +77,7 @@ func handleDither(c *fiber.Ctx) error {
     // Scale to 0-100 range
     contrast = math.Min(math.Max(contrast, 0), 100)
 
-    midtones, err := strconv.ParseFloat(c.FormValue("midtones", "0"), 64)
+    midtones, err := strconv.ParseFloat(c.FormValue("midtones", "50"), 64)
     if err != nil {
         return c.Status(400).JSON(fiber.Map{
             "error": "Invalid midtones value",
@@ -86,7 +86,7 @@ func handleDither(c *fiber.Ctx) error {
     // Scale to 0-100 range
     midtones = math.Min(math.Max(midtones, 0), 100)
 
-    highlights, err := strconv.ParseFloat(c.FormValue("highlights", "0"), 64)
+    highlights, err := strconv.ParseFloat(c.FormValue("highlights", "50"), 64)
     if err != nil {
         return c.Status(400).JSON(fiber.Map{
             "error": "Invalid highlights value",
@@ -95,7 +95,7 @@ func handleDither(c *fiber.Ctx) error {
     // Scale to 0-100 range
     highlights = math.Min(math.Max(highlights, 0), 100)
 
-    luminance, err := strconv.ParseFloat(c.FormValue("luminanceThreshold", "0"), 64)
+    luminance, err := strconv.ParseFloat(c.FormValue("luminanceThreshold", "50"), 64)
     if err != nil {
         return c.Status(400).JSON(fiber.Map{
             "error": "Invalid luminance value",
@@ -171,11 +171,23 @@ func floydSteinberg(img image.Image, scale float64, invert bool) image.Image {
         errors[i] = make([]float64, width)
     }
 
-    // Apply dithering
-    for y := 0; y < height; y++ {
-        for x := 0; x < width; x++ {
-            oldPixel := color.GrayModel.Convert(img.At(x, y)).(color.Gray)
-            oldValue := float64(oldPixel.Y) + errors[y][x]
+    // Calculate pixel size based on scale (1-20)
+    pixelSize := int(math.Max(1, math.Round(scale)))
+
+    // Apply dithering with scaled pixels
+    for y := 0; y < height; y += pixelSize {
+        for x := 0; x < width; x += pixelSize {
+            // Average the pixel block
+            var sum float64
+            count := 0
+            for dy := 0; dy < pixelSize && y+dy < height; dy++ {
+                for dx := 0; dx < pixelSize && x+dx < width; dx++ {
+                    oldPixel := color.GrayModel.Convert(img.At(x+dx, y+dy)).(color.Gray)
+                    sum += float64(oldPixel.Y) + errors[y+dy][x+dx]
+                    count++
+                }
+            }
+            oldValue := sum / float64(count)
 
             // Determine new binary value with inversion
             var newValue float64
@@ -193,25 +205,27 @@ func floydSteinberg(img image.Image, scale float64, invert bool) image.Image {
                 }
             }
 
-            result.Set(x, y, color.Gray{Y: uint8(newValue)})
+            // Set the entire block to the same value
+            for dy := 0; dy < pixelSize && y+dy < height; dy++ {
+                for dx := 0; dx < pixelSize && x+dx < width; dx++ {
+                    result.Set(x+dx, y+dy, color.Gray{Y: uint8(newValue)})
+                }
+            }
 
             // Calculate error
             quantError := oldValue - newValue
 
-            // Scale error diffusion based on scale parameter (0-20)
-            errorScale := scale / 20.0
-
-            // Distribute error
-            if x < width-1 {
-                errors[y][x+1] += quantError * 7 / 16 * errorScale
+            // Distribute error to the next block
+            if x+pixelSize < width {
+                errors[y][x+pixelSize] += quantError * 7 / 16
             }
-            if y < height-1 {
-                if x > 0 {
-                    errors[y+1][x-1] += quantError * 3 / 16 * errorScale
+            if y+pixelSize < height {
+                if x >= pixelSize {
+                    errors[y+pixelSize][x-pixelSize] += quantError * 3 / 16
                 }
-                errors[y+1][x] += quantError * 5 / 16 * errorScale
-                if x < width-1 {
-                    errors[y+1][x+1] += quantError * 1 / 16 * errorScale
+                errors[y+pixelSize][x] += quantError * 5 / 16
+                if x+pixelSize < width {
+                    errors[y+pixelSize][x+pixelSize] += quantError * 1 / 16
                 }
             }
         }
@@ -234,21 +248,30 @@ func ordered(img image.Image, scale float64, invert bool) image.Image {
         {15, 7, 13, 5},
     }
 
-    // Calculate threshold based on scale (0-20)
-    scaleNormalized := scale / 20.0
+    // Calculate pixel size based on scale (1-20)
+    pixelSize := int(math.Max(1, math.Round(scale)))
 
-    for y := 0; y < height; y++ {
-        for x := 0; x < width; x++ {
-            oldPixel := color.GrayModel.Convert(img.At(x, y)).(color.Gray)
-            oldValue := float64(oldPixel.Y)
+    for y := 0; y < height; y += pixelSize {
+        for x := 0; x < width; x += pixelSize {
+            // Average the pixel block
+            var sum float64
+            count := 0
+            for dy := 0; dy < pixelSize && y+dy < height; dy++ {
+                for dx := 0; dx < pixelSize && x+dx < width; dx++ {
+                    oldPixel := color.GrayModel.Convert(img.At(x+dx, y+dy)).(color.Gray)
+                    sum += float64(oldPixel.Y)
+                    count++
+                }
+            }
+            oldValue := sum / float64(count)
 
-            // Get threshold from Bayer matrix
-            bayerThreshold := float64(bayerMatrix[y%4][x%4]) / 16.0 * 255.0
-            scaledThreshold := 128 + (bayerThreshold-128)*scaleNormalized
+            // Get threshold from Bayer matrix using the block position
+            bayerThreshold := float64(bayerMatrix[(y/pixelSize)%4][(x/pixelSize)%4]) / 16.0 * 255.0
+            threshold := 128 + (bayerThreshold - 128)
 
             // Determine output value with inversion
             var newValue uint8
-            if oldValue < scaledThreshold {
+            if oldValue < threshold {
                 if invert {
                     newValue = 255
                 } else {
@@ -262,7 +285,12 @@ func ordered(img image.Image, scale float64, invert bool) image.Image {
                 }
             }
 
-            result.Set(x, y, color.Gray{Y: newValue})
+            // Set the entire block to the same value
+            for dy := 0; dy < pixelSize && y+dy < height; dy++ {
+                for dx := 0; dx < pixelSize && x+dx < width; dx++ {
+                    result.Set(x+dx, y+dy, color.Gray{Y: newValue})
+                }
+            }
         }
     }
 
@@ -274,11 +302,14 @@ func adjustImage(img image.Image, contrast, midtones, highlights, luminance floa
     bounds := img.Bounds()
     adjusted := image.NewRGBA(bounds)
     
-    // Normalize parameters to 0-1 range
-    contrast = contrast / 100.0
+    // Normalize parameters to -1 to 1 range for contrast, 0-1 for others
+    contrast = (contrast - 50.0) / 50.0  // Convert 0-100 to -1 to 1
     midtones = midtones / 100.0
     highlights = highlights / 100.0
     luminance = luminance / 100.0
+    
+    // Pre-calculate contrast curve parameters
+    contrastFactor := math.Tan((contrast + 1) * math.Pi/4)
     
     for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
         for x := bounds.Min.X; x < bounds.Max.X; x++ {
@@ -294,30 +325,41 @@ func adjustImage(img image.Image, contrast, midtones, highlights, luminance floa
             // Calculate luminance value
             lum := (0.299*float64(r) + 0.587*float64(g) + 0.114*float64(b)) / 255.0
             
-            // Apply contrast
-            if contrast > 0 {
-                lum = (lum - 0.5) * (1.0 + contrast) + 0.5
+            // Apply contrast using smooth S-curve
+            if contrast != 0 {
+                lum = 0.5 + (math.Atan((lum-0.5)*contrastFactor) / math.Pi * 2.0) * 0.5
             }
             
-            // Apply midtones
-            if midtones > 0 {
-                if lum < 0.5 {
-                    lum = lum * (1.0 - midtones)
-                } else {
-                    lum = lum + (1.0 - lum) * midtones
+            // Apply midtones using power curve
+            if midtones != 0.5 {
+                gamma := 1.0 + (midtones - 0.5)*2.0  // Convert 0-1 to gamma range 0.0-3.0
+                if gamma != 0 {
+                    lum = math.Pow(lum, 1.0/gamma)
                 }
             }
             
-            // Apply highlights
+            // Apply highlights with smooth rolloff
             if highlights > 0 {
-                if lum > 0.5 {
-                    lum = lum + (1.0 - lum) * highlights
+                threshold := 0.5
+                if lum > threshold {
+                    factor := (lum - threshold) / (1.0 - threshold)
+                    boost := factor * highlights
+                    lum = lum + (1.0 - lum) * boost * (1.0 - factor)  // Reduce boost near white
                 }
             }
             
-            // Apply luminance threshold
-            if lum < luminance {
-                lum = 0
+            // Apply luminance threshold with smooth transition
+            if luminance > 0 {
+                threshold := luminance
+                transition := 0.1  // 10% smooth transition zone
+                if lum < threshold {
+                    factor := (threshold - lum) / transition
+                    if factor > 1.0 {
+                        lum = 0
+                    } else {
+                        lum *= (1.0 - factor)
+                    }
+                }
             }
             
             // Clamp values
@@ -332,68 +374,85 @@ func adjustImage(img image.Image, contrast, midtones, highlights, luminance floa
     return adjusted
 }
 
-// applyBlur applies a Gaussian blur effect
+// applyBlur applies a Gaussian blur effect using separable convolution
 func applyBlur(img image.Image, radius float64) image.Image {
-    bounds := img.Bounds()
-    blurred := image.NewRGBA(bounds)
-    
-    // Create kernel
-    size := int(radius * 2)
-    if size < 1 {
-        size = 1
+    if radius <= 0 {
+        return img
     }
-    kernel := make([][]float64, size)
+
+    bounds := img.Bounds()
     sigma := radius / 2.0
-    twoSigmaSquare := 2 * sigma * sigma
+    kernelSize := int(math.Ceil(radius * 3)) // Cover 3 standard deviations
+    if kernelSize%2 == 0 {
+        kernelSize++
+    }
+
+    // Create 1D Gaussian kernel
+    kernel := make([]float64, kernelSize)
     sum := 0.0
+    offset := kernelSize / 2
+    twoSigmaSquare := 2 * sigma * sigma
     
-    for i := 0; i < size; i++ {
-        kernel[i] = make([]float64, size)
-        for j := 0; j < size; j++ {
-            x := float64(i - size/2)
-            y := float64(j - size/2)
-            kernel[i][j] = math.Exp(-(x*x + y*y) / twoSigmaSquare)
-            sum += kernel[i][j]
-        }
+    for i := 0; i < kernelSize; i++ {
+        x := float64(i - offset)
+        kernel[i] = math.Exp(-(x * x) / twoSigmaSquare)
+        sum += kernel[i]
     }
     
     // Normalize kernel
-    for i := 0; i < size; i++ {
-        for j := 0; j < size; j++ {
-            kernel[i][j] /= sum
-        }
+    for i := range kernel {
+        kernel[i] /= sum
     }
-    
-    // Apply convolution
-    offset := size / 2
+
+    // Horizontal pass
+    horizontal := image.NewRGBA(bounds)
     for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
         for x := bounds.Min.X; x < bounds.Max.X; x++ {
-            var r, g, b, a float64
-            
-            // Apply kernel
-            for ky := 0; ky < size; ky++ {
-                for kx := 0; kx < size; kx++ {
-                    ix := x + kx - offset
-                    iy := y + ky - offset
-                    
-                    if ix >= bounds.Min.X && ix < bounds.Max.X && iy >= bounds.Min.Y && iy < bounds.Max.Y {
-                        pixel := img.At(ix, iy)
-                        pr, pg, pb, pa := pixel.RGBA()
-                        weight := kernel[ky][kx]
-                        
-                        r += float64(pr>>8) * weight
-                        g += float64(pg>>8) * weight
-                        b += float64(pb>>8) * weight
-                        a += float64(pa>>8) * weight
-                    }
+            var sum float64
+            var totalWeight float64
+
+            for i := 0; i < kernelSize; i++ {
+                ix := x + i - offset
+                if ix >= bounds.Min.X && ix < bounds.Max.X {
+                    pixel := color.GrayModel.Convert(img.At(ix, y)).(color.Gray)
+                    weight := kernel[i]
+                    sum += float64(pixel.Y) * weight
+                    totalWeight += weight
                 }
             }
-            
-            // Set pixel
-            gray := uint8((r*0.299 + g*0.587 + b*0.114))
-            blurred.Set(x, y, color.RGBA{gray, gray, gray, uint8(a)})
+
+            if totalWeight > 0 {
+                sum /= totalWeight
+            }
+            value := uint8(math.Min(math.Max(sum, 0), 255))
+            horizontal.Set(x, y, color.Gray{Y: value})
         }
     }
-    
-    return blurred
+
+    // Vertical pass
+    result := image.NewRGBA(bounds)
+    for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+        for x := bounds.Min.X; x < bounds.Max.X; x++ {
+            var sum float64
+            var totalWeight float64
+
+            for i := 0; i < kernelSize; i++ {
+                iy := y + i - offset
+                if iy >= bounds.Min.Y && iy < bounds.Max.Y {
+                    pixel := color.GrayModel.Convert(horizontal.At(x, iy)).(color.Gray)
+                    weight := kernel[i]
+                    sum += float64(pixel.Y) * weight
+                    totalWeight += weight
+                }
+            }
+
+            if totalWeight > 0 {
+                sum /= totalWeight
+            }
+            value := uint8(math.Min(math.Max(sum, 0), 255))
+            result.Set(x, y, color.RGBA{value, value, value, 255})
+        }
+    }
+
+    return result
 }

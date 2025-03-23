@@ -111,6 +111,7 @@ sliderInputs.forEach(({ input, isFloat }) => {
         if (numInput) {
             numInput.value = value;
         }
+        document.documentElement.style.setProperty('--dot-scale', value);
         debouncedUpdateImage();
     });
 });
