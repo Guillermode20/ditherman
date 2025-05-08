@@ -1,0 +1,243 @@
+/* Terminal Dark Mode Theme */
+:root {
+    --bg-primary: #121212;
+    --bg-secondary: #1e1e1e;
+    --text-primary: #FFFFFF;
+    --text-secondary: #cccccc;
+    --accent: #FFFFFF;
+    --border: #444444;
+    --slider-bg: #333333;
+}
+
+body {
+    font-family: 'Courier New', monospace;
+    padding: 0;
+    margin: 0;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+}
+
+.app-header {
+    text-align: center;
+    padding: 20px;
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+}
+
+.ascii-header {
+    font-family: monospace;
+    white-space: pre;
+    display: block;
+    color: var(--accent);
+    font-size: 1rem;
+    text-align: center;
+    margin: 0 auto;
+    line-height: 1.2;
+}
+
+.main-app-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar {
+    width: 100%;
+    padding: 20px;
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+}
+
+.main-content {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.canvas-container {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+canvas {
+    border: 1px solid var(--border);
+    max-width: 100%;
+    height: auto;
+}
+
+#originalCanvas {
+    display: none;
+}
+
+.controls {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    padding: 15px;
+    border-radius: 4px;
+    background-color: var(--bg-primary);
+    margin-bottom: 15px;
+}
+
+.controls h2 {
+    margin-top: 0;
+    color: var(--accent);
+    font-size: 1.2rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 5px;
+}
+
+.controls label,
+.controls select,
+.controls button {
+    margin-bottom: 10px;
+    font-family: 'Courier New', monospace;
+}
+
+.controls label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.control-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+output {
+    min-width: 40px;
+    text-align: right;
+    color: var(--accent);
+}
+
+.reset-btn {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    cursor: pointer;
+    font-size: 0.8rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+}
+
+.reset-btn:hover {
+    background-color: var(--accent);
+    color: var(--bg-primary);
+}
+
+.sidebar > .reset-btn {
+    display: block;
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 15px;
+}
+
+button {
+    background-color: var(--bg-secondary);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 8px 15px;
+    cursor: pointer;
+    font-size: 1rem;
+    border-radius: 4px;
+    transition: all 0.3s;
+}
+
+button:hover {
+    background-color: var(--accent);
+    color: var(--bg-primary);
+}
+
+select, input[type="file"] {
+    background-color: var(--bg-secondary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    padding: 5px;
+    border-radius: 4px;
+}
+
+input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 8px;
+    background: var(--slider-bg);
+    border-radius: 4px;
+    outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+/* Styling for custom file upload */
+.image-upload-container {
+    margin-bottom: 20px;
+    text-align: center;
+    border: 2px dashed var(--border);
+    padding: 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.image-upload-container:hover {
+    background-color: var(--bg-secondary);
+}
+
+.image-upload-container input[type="file"] {
+    display: none; /* Hide the default file input */
+}
+
+.image-upload-container label {
+    display: block;
+    cursor: pointer;
+    color: var(--accent);
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+/* Responsive design */
+@media (min-width: 768px) {
+    .main-app-container {
+        flex-direction: row;
+        height: 100vh;
+    }
+    
+    .sidebar {
+        width: 400px;
+        height: 100%;
+        overflow-y: auto;
+        border-right: 1px solid var(--border);
+        border-bottom: none;
+    }
+}
+
+.sidebar .ascii-header {
+    font-size: 0.5rem;
+    width: 100%;
+    overflow-x: auto;
+    max-width: 100%;
+}
