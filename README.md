@@ -1,3 +1,4 @@
+```
 ██████╗ ██╗████████╗██╗  ██╗███████╗██████╗ ███╗   ███╗ █████╗ ███╗   ██╗
 ██╔══██╗██║╚══██╔══╝██║  ██║██╔════╝██╔══██╗████╗ ████║██╔══██╗████╗  ██║
 ██║  ██║██║   ██║   ███████║█████╗  ██████╔╝██╔████╔██║███████║██╔██╗ ██║
@@ -32,3 +33,4 @@ Simply open the `index.html` file in your web browser.
 - `js/app.js`: Application logic for handling user interaction and controls.
 
 Enjoy dithering! 
+```
