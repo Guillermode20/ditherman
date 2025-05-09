@@ -128,4 +128,39 @@ export function applyBlur(imageData: ImageData, blurRadius: number): ImageData {
     }
   }
   return output;
-} 
+}
+
+/**
+ * Apply luminance adjustment to the image
+ * @param imageData - The image data to adjust
+ * @param luminanceValue - Value from -100 (darker) to 100 (brighter), 0 is no change
+ */
+export function applyLuminance(imageData: ImageData, luminanceValue: number): ImageData {
+  const data = imageData.data;
+  const length = data.length;
+  const adjustment = Math.round(luminanceValue * 1.28); // Scale -100..100 to -128..128
+
+  for (let i = 0; i < length; i += 4) {
+    data[i] = clamp(data[i] + adjustment);     // Red
+    data[i + 1] = clamp(data[i + 1] + adjustment); // Green
+    data[i + 2] = clamp(data[i + 2] + adjustment); // Blue
+  }
+  return imageData;
+}
+
+/**
+ * Invert the colors of the image
+ * @param imageData - The image data to invert
+ */
+export function applyInvert(imageData: ImageData): ImageData {
+  const data = imageData.data;
+  const length = data.length;
+
+  for (let i = 0; i < length; i += 4) {
+    data[i] = 255 - data[i];     // Red
+    data[i + 1] = 255 - data[i + 1]; // Green
+    data[i + 2] = 255 - data[i + 2]; // Blue
+    // Alpha channel (data[i + 3]) remains unchanged
+  }
+  return imageData;
+}

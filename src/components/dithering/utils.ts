@@ -47,58 +47,43 @@ export const findClosestDitherColor = (gray: number, palette: number[], paletteT
   }
 };
 
-// Helper function to process image scaling
+// Helper function to process image scaling (pure JS, nearest-neighbor)
 export const scaleImageData = (
   imageData: ImageData,
   scale: number
 ): { processData: Uint8ClampedArray, processWidth: number, processHeight: number } => {
   const { data, width, height } = imageData;
-  const scaledWidth = Math.floor(width / scale);
-  const scaledHeight = Math.floor(height / scale);
-
-  if (scale > 1) {
-    const scaledCanvas = document.createElement('canvas');
-    scaledCanvas.width = scaledWidth;
-    scaledCanvas.height = scaledHeight;
-    const ctx = scaledCanvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) {
-      return { 
-        processData: new Uint8ClampedArray(data), 
-        processWidth: width, 
-        processHeight: height 
-      };
-    }
-
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = width;
-    tempCanvas.height = height;
-    const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
-    if (!tempCtx) {
-      return { 
-        processData: new Uint8ClampedArray(data), 
-        processWidth: width, 
-        processHeight: height 
-      };
-    }
-    tempCtx.putImageData(imageData, 0, 0);
-    ctx.drawImage(tempCanvas, 0, 0, width, height, 0, 0, scaledWidth, scaledHeight);
-
-    const scaledImageData = ctx.getImageData(0, 0, scaledWidth, scaledHeight);
-    return {
-      processData: new Uint8ClampedArray(scaledImageData.data),
-      processWidth: scaledWidth,
-      processHeight: scaledHeight
-    };
-  } else {
+  if (scale <= 1) {
     return {
       processData: new Uint8ClampedArray(data),
       processWidth: width,
       processHeight: height
     };
   }
+  const scaledWidth = Math.floor(width / scale);
+  const scaledHeight = Math.floor(height / scale);
+  const scaledData = new Uint8ClampedArray(scaledWidth * scaledHeight * 4);
+
+  for (let y = 0; y < scaledHeight; y++) {
+    for (let x = 0; x < scaledWidth; x++) {
+      const srcX = Math.floor(x * scale);
+      const srcY = Math.floor(y * scale);
+      const srcIdx = (srcY * width + srcX) * 4;
+      const dstIdx = (y * scaledWidth + x) * 4;
+      scaledData[dstIdx] = data[srcIdx];
+      scaledData[dstIdx + 1] = data[srcIdx + 1];
+      scaledData[dstIdx + 2] = data[srcIdx + 2];
+      scaledData[dstIdx + 3] = data[srcIdx + 3];
+    }
+  }
+  return {
+    processData: scaledData,
+    processWidth: scaledWidth,
+    processHeight: scaledHeight
+  };
 };
 
-// Helper function to upscale processed image back to original size
+// Helper function to upscale processed image back to original size (pure JS, nearest-neighbor)
 export const upscaleImageData = (
   processedData: Uint8ClampedArray,
   processWidth: number,
@@ -106,30 +91,21 @@ export const upscaleImageData = (
   originalWidth: number,
   originalHeight: number
 ): ImageData => {
-  const processedImageData = new ImageData(processedData, processWidth, processHeight);
-  
-  const finalCanvas = document.createElement('canvas');
-  finalCanvas.width = originalWidth;
-  finalCanvas.height = originalHeight;
-  const finalCtx = finalCanvas.getContext('2d', { willReadFrequently: true });
-  
-  if (!finalCtx) {
-    return processedImageData;
+  if (processWidth === originalWidth && processHeight === originalHeight) {
+    return new ImageData(processedData, processWidth, processHeight);
   }
-
-  const tempCanvas = document.createElement('canvas');
-  tempCanvas.width = processWidth;
-  tempCanvas.height = processHeight;
-  const tempCtx = tempCanvas.getContext('2d');
-  
-  if (!tempCtx) {
-    return processedImageData;
+  const upscaledData = new Uint8ClampedArray(originalWidth * originalHeight * 4);
+  for (let y = 0; y < originalHeight; y++) {
+    for (let x = 0; x < originalWidth; x++) {
+      const srcX = Math.floor(x * processWidth / originalWidth);
+      const srcY = Math.floor(y * processHeight / originalHeight);
+      const srcIdx = (srcY * processWidth + srcX) * 4;
+      const dstIdx = (y * originalWidth + x) * 4;
+      upscaledData[dstIdx] = processedData[srcIdx];
+      upscaledData[dstIdx + 1] = processedData[srcIdx + 1];
+      upscaledData[dstIdx + 2] = processedData[srcIdx + 2];
+      upscaledData[dstIdx + 3] = processedData[srcIdx + 3];
+    }
   }
-  
-  tempCtx.putImageData(processedImageData, 0, 0);
-
-  finalCtx.imageSmoothingEnabled = false; // Use nearest-neighbor for upscaling
-  finalCtx.drawImage(tempCanvas, 0, 0, processWidth, processHeight, 0, 0, originalWidth, originalHeight);
-  
-  return finalCtx.getImageData(0, 0, originalWidth, originalHeight);
-}; 
+  return new ImageData(upscaledData, originalWidth, originalHeight);
+};

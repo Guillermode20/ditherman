@@ -1,9 +1,8 @@
-import React, { useCallback, useMemo, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 
-// Import dithering methods
-import { floydSteinbergDither, bayerOrderedDither, atkinsonDither, sierraDither } from './components/dithering';
-// Import image adjustment methods
-import { applyContrast, applyHighlights, applyMidtones, applyBlur } from './components/ImageAdjustments';
+// Import worker using Vite's syntax
+const ImageWorker = () =>
+  new Worker(new URL('./imageWorker.ts', import.meta.url), { type: 'module' });
 
 function App() {
   const [ditherScale, setDitherScale] = React.useState(1);
@@ -18,12 +17,18 @@ function App() {
   const [ditheringAlgorithm, setDitheringAlgorithm] = React.useState('floyd-steinberg');
   const [bayerMatrixSize, setBayerMatrixSize] = React.useState(4); // Default Bayer matrix size (e.g., 4x4)
 
+  // New states for luminance and invert
+  const [luminance, setLuminance] = React.useState(0);
+  const [invertColors, setInvertColors] = React.useState(false);
+
   const [debouncedUpdates, setDebouncedUpdates] = React.useState({
     ditherScale: 1,
     contrast: 100,
     highlights: 0,
     midtones: 0,
     blur: 0,
+    luminance: 0,
+    invertColors: false,
     palette: 'bw',
     ditheringAlgorithm: 'floyd-steinberg',
     bayerMatrixSize: 4,
@@ -32,6 +37,42 @@ function App() {
   const originalImageRef = React.useRef<HTMLImageElement | null>(null);
   const processedImageRef = React.useRef<ImageData | null>(null);
   const updateTimerRef = React.useRef<number | null>(null);
+
+  // Web Worker ref
+  const workerRef = useRef<Worker | null>(null);
+
+  // Store latest canvas size for worker result
+  const canvasSizeRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
+
+  // Setup worker on mount
+  useEffect(() => {
+    workerRef.current = ImageWorker();
+    return () => {
+      workerRef.current?.terminate();
+    };
+  }, []);
+
+  // Listen for worker messages and update canvas
+  useEffect(() => {
+    if (!workerRef.current) return;
+    const handleWorkerMessage = (e: MessageEvent) => {
+      const ditheredData = e.data as ImageData;
+      const ditheredCanvas = document.getElementById('ditheredCanvas') as HTMLCanvasElement;
+      if (ditheredCanvas && ditheredData) {
+        ditheredCanvas.width = canvasSizeRef.current.width;
+        ditheredCanvas.height = canvasSizeRef.current.height;
+        const ctx = ditheredCanvas.getContext('2d', { willReadFrequently: true });
+        if (ctx) {
+          ctx.clearRect(0, 0, ditheredCanvas.width, ditheredCanvas.height);
+          ctx.putImageData(ditheredData, 0, 0);
+        }
+      }
+    };
+    workerRef.current.addEventListener('message', handleWorkerMessage);
+    return () => {
+      workerRef.current?.removeEventListener('message', handleWorkerMessage);
+    };
+  }, []);
 
   useEffect(() => {
     if (updateTimerRef.current) {
@@ -45,6 +86,8 @@ function App() {
         highlights,
         midtones,
         blur,
+        luminance,
+        invertColors,
         palette,
         ditheringAlgorithm,
         bayerMatrixSize,
@@ -56,7 +99,7 @@ function App() {
         window.clearTimeout(updateTimerRef.current);
       }
     };
-  }, [ditherScale, contrast, highlights, midtones, blur, palette, ditheringAlgorithm, bayerMatrixSize]);
+  }, [ditherScale, contrast, highlights, midtones, blur, luminance, invertColors, palette, ditheringAlgorithm, bayerMatrixSize]);
 
   useEffect(() => {
     if (imageLoaded) {
@@ -64,93 +107,46 @@ function App() {
     }
   }, [debouncedUpdates, imageLoaded]); // applyDithering is memoized, safe to include
 
+  // Offload image processing to worker
   const applyDithering = useCallback(() => {
-    if (!originalImageRef.current) return;
+    if (!originalImageRef.current || !workerRef.current) return;
 
     const img = originalImageRef.current;
     const originalCanvas = document.getElementById('originalCanvas') as HTMLCanvasElement;
-    const ditheredCanvas = document.getElementById('ditheredCanvas') as HTMLCanvasElement;
 
-    if (!originalCanvas || !ditheredCanvas) return;
+    if (!originalCanvas) return;
 
     originalCanvas.width = img.width;
     originalCanvas.height = img.height;
-    ditheredCanvas.width = img.width;
-    ditheredCanvas.height = img.height;
 
     const originalCtx = originalCanvas.getContext('2d', { willReadFrequently: true });
     if (!originalCtx) return;
     originalCtx.clearRect(0, 0, originalCanvas.width, originalCanvas.height);
     originalCtx.drawImage(img, 0, 0);
 
-    let imageData = originalCtx.getImageData(0, 0, img.width, img.height);
+    const imageData = originalCtx.getImageData(0, 0, img.width, img.height);
 
-    // Apply adjustments if parameters changed or no cached version
-    const needsAdjustment = debouncedUpdates.contrast !== 100 ||
-      debouncedUpdates.highlights !== 0 ||
-      debouncedUpdates.midtones !== 0 ||
-      debouncedUpdates.blur > 0;
+    // Store canvas size for later use in worker result
+    canvasSizeRef.current = { width: img.width, height: img.height };
 
-    if (needsAdjustment) {
-      // Create a fresh copy for adjustments if we are going to adjust
-      let adjustedImageData = new ImageData(
-        new Uint8ClampedArray(imageData.data),
-        imageData.width,
-        imageData.height
-      );
-
-      if (debouncedUpdates.contrast !== 100) {
-        adjustedImageData = applyContrast(adjustedImageData, debouncedUpdates.contrast);
-      }
-      if (debouncedUpdates.highlights !== 0) {
-        adjustedImageData = applyHighlights(adjustedImageData, debouncedUpdates.highlights);
-      }
-      if (debouncedUpdates.midtones !== 0) {
-        adjustedImageData = applyMidtones(adjustedImageData, debouncedUpdates.midtones);
-      }
-      if (debouncedUpdates.blur > 0) {
-        adjustedImageData = applyBlur(adjustedImageData, debouncedUpdates.blur);
-      }
-      processedImageRef.current = adjustedImageData; // Cache adjusted
-      imageData = adjustedImageData; // Use adjusted for dithering
-    } else if (processedImageRef.current) {
-      imageData = processedImageRef.current; // Use cached adjusted image
-    }
-    // If no adjustments and no cache, imageData is the original from originalCtx.getImageData
-
-    // Apply dithering
-    const ditheredCtx = ditheredCanvas.getContext('2d', { willReadFrequently: true });
-    if (ditheredCtx) {
-      ditheredCtx.clearRect(0, 0, ditheredCanvas.width, ditheredCanvas.height);
-      let ditheredData;
-      if (debouncedUpdates.ditheringAlgorithm === 'bayer') {
-        ditheredData = bayerOrderedDither({
-          imageData,
-          scale: debouncedUpdates.ditherScale,
-          paletteType: debouncedUpdates.palette,
-          matrixSize: debouncedUpdates.bayerMatrixSize
-        });
-      } else if (debouncedUpdates.ditheringAlgorithm === 'atkinson') {
-        ditheredData = atkinsonDither({
-          imageData,
-          scale: debouncedUpdates.ditherScale,
-          paletteType: debouncedUpdates.palette,
-        });
-      } else if (debouncedUpdates.ditheringAlgorithm === 'sierra') {
-        ditheredData = sierraDither({
-          imageData,
-          scale: debouncedUpdates.ditherScale,
-          paletteType: debouncedUpdates.palette,
-        });
-      } else { // Default to Floyd-Steinberg
-        ditheredData = floydSteinbergDither({
-          imageData,
-          scale: debouncedUpdates.ditherScale,
-          paletteType: debouncedUpdates.palette
-        });
-      }
-      ditheredCtx.putImageData(ditheredData, 0, 0);
-    }
+    // Send data to worker
+    workerRef.current.postMessage({
+      imageData,
+      adjustments: {
+        contrast: debouncedUpdates.contrast,
+        highlights: debouncedUpdates.highlights,
+        midtones: debouncedUpdates.midtones,
+        blur: debouncedUpdates.blur,
+        luminance: debouncedUpdates.luminance,
+        invertColors: debouncedUpdates.invertColors,
+      },
+      dithering: {
+        algorithm: debouncedUpdates.ditheringAlgorithm,
+        ditherScale: debouncedUpdates.ditherScale,
+        palette: debouncedUpdates.palette,
+        bayerMatrixSize: debouncedUpdates.bayerMatrixSize,
+      },
+    });
   }, [debouncedUpdates]);
 
   const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,39 +168,31 @@ function App() {
   }, []);
 
   // Slider/Select change handlers
+  const handleLuminanceChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setLuminance(parseInt(e.target.value));
+  }, [setLuminance]);
+
+  const handleInvertColorsToggle = useCallback(() => {
+    setInvertColors((prev) => !prev);
+  }, []);
   const handleDitherScaleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value);
-    setDitherScale(value);
-    const output = document.getElementById('ditherScaleValue') as HTMLOutputElement;
-    if (output) output.value = value.toString();
+    setDitherScale(parseInt(e.target.value));
   }, [setDitherScale]);
 
   const handleContrastChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value);
-    setContrast(value);
-    const output = document.getElementById('contrastSliderValue') as HTMLOutputElement;
-    if (output) output.value = value.toString();
+    setContrast(parseInt(e.target.value));
   }, [setContrast]);
 
   const handleHighlightsChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value);
-    setHighlights(value);
-    const output = document.getElementById('highlightsSliderValue') as HTMLOutputElement;
-    if (output) output.value = value.toString();
+    setHighlights(parseInt(e.target.value));
   }, [setHighlights]);
 
   const handleMidtonesChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value);
-    setMidtones(value);
-    const output = document.getElementById('midtonesSliderValue') as HTMLOutputElement;
-    if (output) output.value = value.toString();
+    setMidtones(parseInt(e.target.value));
   }, [setMidtones]);
 
   const handleBlurChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value);
-    setBlur(value);
-    const output = document.getElementById('blurSliderValue') as HTMLOutputElement;
-    if (output) output.value = value.toString();
+    setBlur(parseInt(e.target.value));
   }, [setBlur]);
 
   const handlePaletteChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -217,70 +205,65 @@ function App() {
     // Reset bayerMatrixSize if switching away from Bayer
     if (value !== 'bayer') {
       setBayerMatrixSize(4); // Reset to default 4x4
-      const output = document.getElementById('bayerMatrixSizeValue') as HTMLOutputElement;
-      if (output) output.value = '4';
-      // Also update the UI element itself if needed, though setting state should handle this
-      const bayerSelect = document.getElementById('bayerMatrixSize') as HTMLSelectElement;
-      if (bayerSelect) bayerSelect.value = '4';
     }
   }, [setDitheringAlgorithm, setBayerMatrixSize]);
 
   const handleBayerMatrixSizeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     setBayerMatrixSize(parseInt(e.target.value, 10));
-    const output = document.getElementById('bayerMatrixSizeValue') as HTMLOutputElement;
-    if (output) output.value = e.target.value; // Show selected size
   }, [setBayerMatrixSize]);
 
   // Reset functions
-  const handleReset = useCallback((controlId: string, defaultValue: number | string, isSelect = false) => {
+  const handleReset = useCallback((controlId: string, defaultValue: number | string | boolean, isSelect = false) => {
     const element = document.getElementById(controlId) as HTMLInputElement | HTMLSelectElement;
     const outputId = `${controlId}Value`;
     const output = document.getElementById(outputId) as HTMLOutputElement;
 
-    if (element) {
+    if (element && typeof defaultValue !== "boolean") {
       element.value = defaultValue.toString();
       if (output && !isSelect) output.value = defaultValue.toString(); // Output for sliders
-      // Special output for bayer matrix size is handled in handleBayerMatrixChange or handleDitheringAlgorithmChange
-      // if (output && isSelect && controlId === 'bayerMatrixSize') output.value = defaultValue.toString(); 
-
-      let invalidateAdjustmentCache = false;
-
-      switch (controlId) {
-        case 'ditherScale':
-          setDitherScale(defaultValue as number);
-          break;
-        case 'contrastSlider':
-          setContrast(defaultValue as number);
-          invalidateAdjustmentCache = true;
-          break;
-        case 'highlightsSlider':
-          setHighlights(defaultValue as number);
-          invalidateAdjustmentCache = true;
-          break;
-        case 'midtonesSlider':
-          setMidtones(defaultValue as number);
-          invalidateAdjustmentCache = true;
-          break;
-        case 'blurSlider':
-          setBlur(defaultValue as number);
-          invalidateAdjustmentCache = true;
-          break;
-        case 'ditheringAlgorithm':
-          setDitheringAlgorithm(defaultValue as string);
-          // Bayer matrix reset logic moved to handleDitheringAlgorithmChange
-          break;
-        case 'bayerMatrixSize':
-          setBayerMatrixSize(defaultValue as number);
-          break;
-        // Palette is handled separately for global reset or direct change
-      }
-      if (invalidateAdjustmentCache) {
-        processedImageRef.current = null;
-      }
-    } else {
-      console.error(`Could not find element for controlId: ${controlId}`);
     }
-  }, [setDitherScale, setContrast, setHighlights, setMidtones, setBlur, setDitheringAlgorithm, setBayerMatrixSize, processedImageRef]);
+
+    let invalidateAdjustmentCache = false;
+
+    switch (controlId) {
+      case 'ditherScale':
+        setDitherScale(defaultValue as number);
+        break;
+      case 'contrastSlider':
+        setContrast(defaultValue as number);
+        invalidateAdjustmentCache = true;
+        break;
+      case 'highlightsSlider':
+        setHighlights(defaultValue as number);
+        invalidateAdjustmentCache = true;
+        break;
+      case 'midtonesSlider':
+        setMidtones(defaultValue as number);
+        invalidateAdjustmentCache = true;
+        break;
+      case 'blurSlider':
+        setBlur(defaultValue as number);
+        invalidateAdjustmentCache = true;
+        break;
+      case 'luminanceSlider':
+        setLuminance(defaultValue as number);
+        invalidateAdjustmentCache = true;
+        break;
+      case 'invertColors':
+        setInvertColors(defaultValue as boolean);
+        invalidateAdjustmentCache = true;
+        break;
+      case 'ditheringAlgorithm':
+        setDitheringAlgorithm(defaultValue as string);
+        break;
+      case 'bayerMatrixSize':
+        setBayerMatrixSize(defaultValue as number);
+        break;
+    }
+    if (invalidateAdjustmentCache) {
+      processedImageRef.current = null;
+    }
+  }, [setDitherScale, setContrast, setHighlights, setMidtones, setBlur, setLuminance, setInvertColors, setDitheringAlgorithm, setBayerMatrixSize, processedImageRef]);
 
   const handleGlobalReset = useCallback(() => {
     handleReset('ditherScale', 1);
@@ -288,10 +271,10 @@ function App() {
     handleReset('highlightsSlider', 0);
     handleReset('midtonesSlider', 0);
     handleReset('blurSlider', 0);
+    handleReset('luminanceSlider', 0);
+    handleReset('invertColors', false);
 
-    // Reset algorithm and then the bayer size if needed
     handleReset('ditheringAlgorithm', 'floyd-steinberg', true);
-    // The logic in handleDitheringAlgorithmChange will handle resetting bayerMatrixSize if it's not 'bayer'
 
     const paletteSelect = document.getElementById('palette') as HTMLSelectElement;
     if (paletteSelect) {
@@ -322,11 +305,8 @@ function App() {
 
   return (
     <>
-      {/* Ensure body tag is not part of React component if this is inside an existing HTML structure */}
-      {/* For a full page app, this is fine. */}
-      <body>
-        <div className="main-app-container">
-          <aside className="sidebar">
+      <div className="main-app-container">
+        <aside className="sidebar">
             <pre className="ascii-header" style={{ whiteSpace: 'pre' }}>
               {`
 ██████╗ ██╗████████╗██╗  ██╗███████╗██████╗ ███╗   ███╗ █████╗ ███╗   ██╗
@@ -419,6 +399,25 @@ function App() {
                 <output id="blurSliderValue">{blur}</output>
                 <button className="reset-btn" onClick={() => handleReset('blurSlider', 0)}>Reset</button>
               </div>
+              <div className="control-row">
+                <label htmlFor="luminanceSlider">Luminance:</label>
+                <input type="range" id="luminanceSlider" min="-100" max="100" value={luminance} onChange={handleLuminanceChange} />
+                <output id="luminanceSliderValue">{luminance}</output>
+                <button className="reset-btn" onClick={() => handleReset('luminanceSlider', 0)}>Reset</button>
+              </div>
+              <div className="control-row">
+                <label htmlFor="invertColors">Invert:</label>
+                <button
+                  id="invertColors"
+                  className={`invert-btn${invertColors ? ' active' : ''}`}
+                  type="button"
+                  onClick={handleInvertColorsToggle}
+                  aria-pressed={invertColors}
+                >
+                  {invertColors ? 'Inverted' : 'Invert Colors'}
+                </button>
+                <button className="reset-btn" onClick={() => handleReset('invertColors', false)}>Reset</button>
+              </div>
             </div>
 
             <button id="globalReset" className="reset-btn global-reset-btn" onClick={handleGlobalReset}>Reset All Settings</button>
@@ -433,7 +432,6 @@ function App() {
             </div>
           </main>
         </div>
-      </body>
     </>
   );
 }

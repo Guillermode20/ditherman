@@ -9,10 +9,15 @@
     --slider-bg: #333333;
 }
 
+html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
 body {
     font-family: 'Courier New', monospace;
-    padding: 0;
-    margin: 0;
     background-color: var(--bg-primary);
     color: var(--text-primary);
     line-height: 1.6;
@@ -31,10 +36,10 @@ body {
     white-space: pre;
     display: block;
     color: var(--accent);
-    font-size: 1rem;
+    font-size: 0.7rem;
     text-align: center;
-    margin: 0 auto;
-    line-height: 1.2;
+    margin: 0 0 4px 0;
+    line-height: 1;
 }
 
 .main-app-container {
@@ -44,18 +49,20 @@ body {
 
 .sidebar {
     width: 100%;
-    padding: 20px;
+    padding: 8px 10px;
     background-color: var(--bg-secondary);
     border-bottom: 1px solid var(--border);
 }
 
-.main-content {
-    flex: 1;
-    padding: 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
+    .main-content {
+        flex: 1;
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        overflow-y: auto;
+    }
 
 .canvas-container {
     display: flex;
@@ -75,22 +82,23 @@ canvas {
 }
 
 .controls {
-    margin-top: 20px;
+    margin-top: 10px;
     display: flex;
     flex-direction: column;
     border: 1px solid var(--border);
-    padding: 15px;
+    padding: 8px;
     border-radius: 4px;
     background-color: var(--bg-primary);
-    margin-bottom: 15px;
+    margin-bottom: 8px;
 }
 
 .controls h2 {
     margin-top: 0;
+    margin-bottom: 6px;
     color: var(--accent);
-    font-size: 1.2rem;
+    font-size: 1rem;
     border-bottom: 1px solid var(--border);
-    padding-bottom: 5px;
+    padding-bottom: 2px;
 }
 
 .controls label,
@@ -109,8 +117,8 @@ canvas {
 .control-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 15px;
+    gap: 6px;
+    margin-bottom: 6px;
 }
 
 output {
@@ -138,8 +146,8 @@ output {
 .sidebar > .reset-btn {
     display: block;
     width: 100%;
-    padding: 8px;
-    margin-bottom: 15px;
+    padding: 4px;
+    margin-bottom: 8px;
 }
 
 button {
@@ -194,11 +202,11 @@ input[type="range"]::-moz-range-thumb {
 
 /* Styling for custom file upload */
 .image-upload-container {
-    margin-bottom: 20px;
+    margin-bottom: 8px;
     text-align: center;
     border: 2px dashed var(--border);
-    padding: 20px;
-    border-radius: 8px;
+    padding: 8px 4px;
+    border-radius: 4px;
     cursor: pointer;
     transition: background-color 0.3s ease;
 }
@@ -215,8 +223,9 @@ input[type="range"]::-moz-range-thumb {
     display: block;
     cursor: pointer;
     color: var(--accent);
-    font-size: 1.2rem;
-    font-weight: bold;
+    font-size: 0.95rem;
+    font-weight: normal;
+    padding: 2px 0;
 }
 
 /* Responsive design */
