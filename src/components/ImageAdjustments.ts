@@ -1,8 +1,5 @@
 import { clamp } from './dithering/utils';
 
-interface AdjustmentProps {
-  imageData: ImageData;
-}
 
 /**
  * Apply contrast adjustment to the image
