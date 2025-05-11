@@ -36,10 +36,13 @@ body {
     white-space: pre;
     display: block;
     color: var(--accent);
-    font-size: 0.7rem;
+    font-size: 3vw;
+    max-width: 100%;
+    overflow-x: auto;
     text-align: center;
     margin: 0 0 4px 0;
-    line-height: 1;
+    line-height: 1.1;
+    word-break: break-all;
 }
 
 .main-app-container {
@@ -153,11 +156,29 @@ output {
     color: var(--bg-primary);
 }
 
-.sidebar > .reset-btn {
+.sidebar > .reset-btn,
+.global-reset-btn {
     display: block;
     width: 100%;
     padding: 4px;
     margin-bottom: 8px;
+    box-sizing: border-box;
+    font-size: 1rem;
+}
+
+@media (max-width: 767px) {
+    .sidebar > .reset-btn,
+    .global-reset-btn {
+        position: static;
+        width: 100%;
+        left: 0;
+        right: 0;
+        margin-bottom: 8px;
+        font-size: 1rem;
+    }
+    .sidebar {
+        padding-bottom: 16px;
+    }
 }
 
 button {
