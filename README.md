@@ -10,6 +10,8 @@
 
 A simple web application for image dithering.
 
+[Try Online Now](https://ditherman.subs2all.workers.dev/)
+
 ## Features
 
 - Upload and dither images.
