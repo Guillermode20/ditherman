@@ -23,16 +23,30 @@
 - Modular dithering algorithms for extensibility.
 - Debounced state updates for efficient processing.
 - Real-time preview using canvas elements.
+- **Refinements (Completed):**
+    - `App.tsx` now uses a fully typed `useReducer` for all adjustment and dithering settings, replacing multiple `useState` hooks.
+    - All state-changing handlers and reset logic use `keyof State` for type safety.
+    - The invert button uses a dedicated toggle handler.
+    - DOM interactions are React-idiomatic (controlled components, `useRef` for canvases).
+    - `App.tsx` has been decomposed into `Sidebar` and `CanvasDisplay` components for improved modularity and maintainability.
+    - All state and handlers are passed as props to these components.
+    - Worker instantiation in `App.tsx` has been simplified (directly created in useEffect).
+    - Debug `console.log` removed from `src/imageWorker.ts`.
+    - useCallback usage reviewed and unnecessary wrappers removed from handlers that only call dispatch or use stable refs.
+    - Error handling implemented in the worker (`src/imageWorker.ts` now posts error messages to the main thread).
 
 ## Design Patterns
 
-- **Separation of Concerns:** UI, image adjustments, and dithering logic are modularized.
-- **Unidirectional Data Flow:** React state flows from controls to processing logic to output.
+- **Separation of Concerns:** UI, image adjustments, and dithering logic are modularized. This is further enhanced by decomposing `App.tsx` and consolidating state logic.
+- **Unidirectional Data Flow:** React state flows from controls to processing logic to output. This pattern is maintained and clarified with `useReducer`.
 - **Performance Optimization:** Debouncing and worker offloading prevent unnecessary re-renders and UI blocking.
+- **State Management:** Uses a single, typed `useReducer` in `App.tsx` for all related state.
+- **Component-Based Architecture:** Core React pattern. Planned to be strengthened by breaking down the large `App.tsx` component.
 
 ## Component Relationships
 
-- `App.tsx` orchestrates all controls, state, and communication with the worker.
+- `App.tsx` (currently) orchestrates all controls, state, and communication with the worker.
+- **Planned:** `App.tsx` will likely become more of a container component, delegating UI rendering and some event handling to smaller child components.
 - Image adjustment and dithering modules are imported and used by the worker.
 - The worker communicates results back to the main thread for display.
 
