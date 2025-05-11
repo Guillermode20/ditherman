@@ -23,6 +23,7 @@
 ## Next Steps
 
 - Awaiting new feature requests, further improvements, or additional code review as needed.
+- UI improvement: Canvas/image display now adapts responsively to available space, preventing scrolling and maintaining aspect ratio on both desktop and mobile.
 
 ## Active Decisions and Considerations
 
