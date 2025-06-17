@@ -37,16 +37,6 @@ export const createDitherPalette = (type: string): number[] => {
   }
 };
 
-export const findClosestDitherColor = (gray: number, palette: number[], paletteType: string): number => {
-  if (paletteType === 'bw') {
-    return gray < 128 ? 0 : 255;
-  } else { // grayscale
-    // For grayscale, palette is already sorted and evenly spaced
-    const interval = 255 / (palette.length - 1);
-    return Math.round(Math.round(gray / interval) * interval);
-  }
-};
-
 // Helper function to process image scaling (pure JS, nearest-neighbor)
 export const scaleImageData = (
   imageData: ImageData,

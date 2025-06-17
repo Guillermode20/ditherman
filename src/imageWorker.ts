@@ -1,6 +1,6 @@
-// Web Worker for image adjustments and dithering
+// Web Worker for image adjustments and dithering (optimized)
 
-import { floydSteinbergDither, bayerOrderedDither, atkinsonDither, sierraDither } from './components/dithering';
+import { optimizedDitherImage, DITHERING_CONFIG } from './components/dithering';
 import { applyContrast, applyHighlights, applyMidtones, applyBlur, applyLuminance, applyInvert } from './components/ImageAdjustments';
 
 interface WorkerRequest {
@@ -21,69 +21,75 @@ interface WorkerRequest {
   };
 }
 
+// Performance monitoring
+const startTime = performance.now();
+
 self.onmessage = function (e: MessageEvent) {
-  try {
-    const { imageData, adjustments, dithering }: WorkerRequest = e.data;
+  const processingStart = performance.now();
+  const { imageData, adjustments, dithering }: WorkerRequest = e.data;
 
-    let processed = imageData;
+  let processed = imageData;
 
-    // Apply adjustments
-    if (adjustments.contrast !== 100) {
-      processed = applyContrast(processed, adjustments.contrast);
-    }
-    if (adjustments.highlights !== 0) {
-      processed = applyHighlights(processed, adjustments.highlights);
-    }
-    if (adjustments.midtones !== 0) {
-      processed = applyMidtones(processed, adjustments.midtones);
-    }
-    if (adjustments.blur > 0) {
-      processed = applyBlur(processed, adjustments.blur);
-    }
-    if (adjustments.luminance !== 0) {
-      processed = applyLuminance(processed, adjustments.luminance);
-    }
-    if (adjustments.invertColors) {
-      processed = applyInvert(processed);
-    }
-
-    // Apply dithering
-    let dithered: ImageData;
-    switch (dithering.algorithm) {
-      case 'bayer':
-        dithered = bayerOrderedDither({
-          imageData: processed,
-          scale: dithering.ditherScale,
-          paletteType: dithering.palette,
-          matrixSize: dithering.bayerMatrixSize,
-        });
-        break;
-      case 'atkinson':
-        dithered = atkinsonDither({
-          imageData: processed,
-          scale: dithering.ditherScale,
-          paletteType: dithering.palette,
-        });
-        break;
-      case 'sierra':
-        dithered = sierraDither({
-          imageData: processed,
-          scale: dithering.ditherScale,
-          paletteType: dithering.palette,
-        });
-        break;
-      default:
-        dithered = floydSteinbergDither({
-          imageData: processed,
-          scale: dithering.ditherScale,
-          paletteType: dithering.palette,
-        });
-        break;
-    }
-
-    // Post result back to main thread
-    self.postMessage(dithered);
-  } catch (error) {
-    self.postMessage({ error: error instanceof Error ? error.message : String(error) });
+  // Apply adjustments sequentially (could be optimized further with SIMD)
+  if (adjustments.contrast !== 100) {
+    processed = applyContrast(processed, adjustments.contrast);
   }
+  if (adjustments.highlights !== 0) {
+    processed = applyHighlights(processed, adjustments.highlights);
+  }
+  if (adjustments.midtones !== 0) {
+    processed = applyMidtones(processed, adjustments.midtones);
+  }
+  if (adjustments.blur > 0) {
+    processed = applyBlur(processed, adjustments.blur);
+  }
+  if (adjustments.luminance !== 0) {
+    processed = applyLuminance(processed, adjustments.luminance);
+  }
+  if (adjustments.invertColors) {
+    processed = applyInvert(processed);
+  }
+
+  // Apply optimized dithering
+  const ditherStart = performance.now();
+  
+  // Map algorithm names to our standardized names
+  const algorithmMap: Record<string, 'floydSteinberg' | 'atkinson' | 'sierra' | 'bayer'> = {
+    'floyd-steinberg': 'floydSteinberg',
+    'floydsteinberg': 'floydSteinberg',
+    'floyd': 'floydSteinberg',
+    'bayer': 'bayer',
+    'ordered': 'bayer',
+    'atkinson': 'atkinson',
+    'sierra': 'sierra'
+  };
+  
+  const algorithmKey = algorithmMap[dithering.algorithm.toLowerCase()] || 'floydSteinberg';
+  
+  const dithered = optimizedDitherImage({
+    imageData: processed,
+    scale: dithering.ditherScale,
+    paletteType: dithering.palette,
+    matrixSize: dithering.bayerMatrixSize,
+  }, algorithmKey);
+
+  const ditherEnd = performance.now();
+  const processingEnd = performance.now();
+
+  // Performance logging for optimization
+  const performance_stats = {
+    total: processingEnd - processingStart,
+    dithering: ditherEnd - ditherStart,
+    imageSize: imageData.width * imageData.height,
+    algorithm: algorithmKey,
+    optimized: DITHERING_CONFIG.useOptimized
+  };
+  
+  // Debug performance in development
+  if (typeof console !== 'undefined') {
+    console.log('Worker performance:', performance_stats);
+  }
+
+  // Post result back to main thread
+  self.postMessage(dithered);
 };
